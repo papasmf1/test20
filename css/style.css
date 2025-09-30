@@ -1,0 +1,172 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(to bottom, #000428, #004e92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #fff;
+    overflow: hidden;
+}
+
+#gameContainer {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background: #000;
+    border: 4px solid #00ff00;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+}
+
+.screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+.screen.overlay {
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 100;
+}
+
+/* 메인 메뉴 스타일 */
+#mainMenu {
+    background: linear-gradient(to bottom, #001a33, #000000);
+}
+
+.game-title {
+    font-size: 72px;
+    color: #00ff00;
+    text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+    margin-bottom: 50px;
+    letter-spacing: 10px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.menu-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.menu-button {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    padding: 15px 40px;
+    background: #003300;
+    color: #00ff00;
+    border: 3px solid #00ff00;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.menu-button:hover {
+    background: #00ff00;
+    color: #000;
+    box-shadow: 0 0 20px #00ff00;
+    transform: scale(1.05);
+}
+
+.high-score {
+    font-size: 20px;
+    color: #ffff00;
+    margin-top: 20px;
+    text-shadow: 0 0 10px #ffff00;
+}
+
+.controls-info {
+    margin-top: 50px;
+    text-align: center;
+    color: #00ccff;
+}
+
+.controls-info h3 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px #00ccff;
+}
+
+.controls-info p {
+    font-size: 16px;
+    margin: 8px 0;
+}
+
+.sound-toggle {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    font-size: 16px;
+}
+
+.sound-toggle input {
+    margin-right: 8px;
+}
+
+/* 일시정지 화면 */
+.pause-content {
+    text-align: center;
+}
+
+.pause-content h2 {
+    font-size: 48px;
+    color: #ffff00;
+    text-shadow: 0 0 20px #ffff00;
+    margin-bottom: 20px;
+}
+
+.pause-content p {
+    font-size: 20px;
+    color: #00ccff;
+}
+
+/* 게임 오버 화면 */
+.gameover-content {
+    text-align: center;
+}
+
+.gameover-content h2 {
+    font-size: 56px;
+    color: #ff0000;
+    text-shadow: 0 0 20px #ff0000;
+    margin-bottom: 30px;
+}
+
+.gameover-content p {
+    font-size: 24px;
+    color: #ffff00;
+    margin-bottom: 15px;
+}
+
+#newHighScore {
+    font-size: 28px;
+    color: #00ff00;
+    text-shadow: 0 0 20px #00ff00;
+    animation: pulse 1s infinite;
+}
+
+.gameover-content .menu-button {
+    margin: 10px;
+}
+
