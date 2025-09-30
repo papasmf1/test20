@@ -15,6 +15,15 @@ class Player extends Entity {
         this.invincible = false;
         this.invincibleTime = 0;
         this.invincibleDuration = 2000; // 2초
+        
+        // 무기 업그레이드 시스템
+        this.weaponLevel = 1;
+        this.maxWeaponLevel = 5;
+        this.bombCount = 3; // 특수 폭탄 개수
+        this.maxBombCount = 10;
+        this.hasShield = false;
+        this.shieldDuration = 0;
+        this.maxShieldDuration = 10000; // 10초
     }
 
     update(deltaTime, input) {
@@ -60,16 +69,125 @@ class Player extends Entity {
                 this.invincibleTime = 0;
             }
         }
+
+        // 쉴드 시간 업데이트
+        if (this.hasShield) {
+            this.shieldDuration += deltaTime;
+            if (this.shieldDuration >= this.maxShieldDuration) {
+                this.hasShield = false;
+                this.shieldDuration = 0;
+            }
+        }
     }
 
     fireLaser() {
         if (this.laserCooldown === 0) {
-            this.laserCooldown = this.laserFireRate;
-            return {
-                x: this.x + this.width / 2,
-                y: this.y,
-                type: 'laser'
-            };
+            // 무기 레벨에 따른 연사 속도 증가
+            const fireRateBonus = (this.weaponLevel - 1) * 20;
+            this.laserCooldown = Math.max(80, this.laserFireRate - fireRateBonus);
+            
+            const projectiles = [];
+            const centerX = this.x + this.width / 2;
+            const topY = this.y;
+
+            // 무기 레벨에 따른 발사 패턴
+            switch(this.weaponLevel) {
+                case 1:
+                    // 레벨 1: 기본 단발
+                    projectiles.push({
+                        x: centerX,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90
+                    });
+                    break;
+
+                case 2:
+                    // 레벨 2: 강화된 단발 (더 굵고 강함)
+                    projectiles.push({
+                        x: centerX,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90,
+                        enhanced: true
+                    });
+                    break;
+
+                case 3:
+                    // 레벨 3: 2발 발사
+                    projectiles.push({
+                        x: centerX - 8,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90
+                    });
+                    projectiles.push({
+                        x: centerX + 8,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90
+                    });
+                    break;
+
+                case 4:
+                    // 레벨 4: 3발 발사 (약간 확산)
+                    projectiles.push({
+                        x: centerX,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90
+                    });
+                    projectiles.push({
+                        x: centerX - 10,
+                        y: topY + 5,
+                        type: 'laser',
+                        angle: -80
+                    });
+                    projectiles.push({
+                        x: centerX + 10,
+                        y: topY + 5,
+                        type: 'laser',
+                        angle: -100
+                    });
+                    break;
+
+                case 5:
+                    // 레벨 5: 5발 발사 (와이드 확산)
+                    projectiles.push({
+                        x: centerX,
+                        y: topY,
+                        type: 'laser',
+                        angle: -90,
+                        enhanced: true
+                    });
+                    projectiles.push({
+                        x: centerX - 8,
+                        y: topY + 3,
+                        type: 'laser',
+                        angle: -85
+                    });
+                    projectiles.push({
+                        x: centerX + 8,
+                        y: topY + 3,
+                        type: 'laser',
+                        angle: -95
+                    });
+                    projectiles.push({
+                        x: centerX - 16,
+                        y: topY + 8,
+                        type: 'laser',
+                        angle: -75
+                    });
+                    projectiles.push({
+                        x: centerX + 16,
+                        y: topY + 8,
+                        type: 'laser',
+                        angle: -105
+                    });
+                    break;
+            }
+
+            return projectiles;
         }
         return null;
     }
@@ -89,7 +207,20 @@ class Player extends Entity {
     hit() {
         if (this.invincible) return false;
 
+        // 쉴드가 있으면 쉴드만 제거
+        if (this.hasShield) {
+            this.hasShield = false;
+            this.shieldDuration = 0;
+            return false;
+        }
+
         this.health--;
+        
+        // 피격 시 무기 레벨 1단계 하락
+        if (this.weaponLevel > 1) {
+            this.weaponLevel--;
+        }
+
         if (this.health <= 0) {
             this.active = false;
             return true; // 사망
@@ -110,6 +241,42 @@ class Player extends Entity {
         this.invincibleTime = 0;
         this.laserCooldown = 0;
         this.bombCooldown = 0;
+        this.weaponLevel = 1;
+        this.bombCount = 3;
+        this.hasShield = false;
+        this.shieldDuration = 0;
+    }
+
+    // 파워업 획득
+    powerUp(type) {
+        switch(type) {
+            case 'weapon':
+                if (this.weaponLevel < this.maxWeaponLevel) {
+                    this.weaponLevel++;
+                    return true;
+                }
+                break;
+            case 'life':
+                if (this.health < this.maxHealth) {
+                    this.health++;
+                    return true;
+                }
+                break;
+            case 'bomb':
+                if (this.bombCount < this.maxBombCount) {
+                    this.bombCount += 3;
+                    if (this.bombCount > this.maxBombCount) {
+                        this.bombCount = this.maxBombCount;
+                    }
+                    return true;
+                }
+                break;
+            case 'shield':
+                this.hasShield = true;
+                this.shieldDuration = 0;
+                return true;
+        }
+        return false;
     }
 
     draw(ctx) {
@@ -153,6 +320,18 @@ class Player extends Entity {
         // 조종석
         ctx.fillStyle = '#00ffff';
         ctx.fillRect(this.x + this.width / 2 - 3, this.y + this.height * 0.3, 6, 8);
+
+        // 쉴드 표시
+        if (this.hasShield) {
+            const shieldAlpha = 0.3 + Math.sin(Date.now() / 100) * 0.2;
+            ctx.strokeStyle = `rgba(0, 255, 255, ${shieldAlpha})`;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2 + 8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
 
         ctx.shadowBlur = 0;
         ctx.restore();

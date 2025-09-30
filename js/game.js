@@ -23,9 +23,12 @@ class Game {
 
         // 게임 객체들
         this.player = new Player(canvas.width / 2 - 16, canvas.height - 100, canvas.width, canvas.height);
-        this.projectilePool = new ObjectPool(Projectile, 50);
+        this.projectilePool = new ObjectPool(Projectile, 100); // 풀 크기 증가
         this.enemyPool = new ObjectPool(Enemy, 30);
         this.enemySpawner = new EnemySpawner(canvas.width, canvas.height);
+        this.powerUpPool = new ObjectPool(PowerUp, 10);
+        this.powerUpSpawnTimer = 0;
+        this.powerUpSpawnInterval = 15000; // 15초마다 파워업 생성
 
         // 스테이지 관리
         this.stageScore = 10000; // 스테이지 클리어 점수
@@ -68,9 +71,11 @@ class Game {
         this.player.reset(this.canvas.width / 2 - 16, this.canvas.height - 100);
         this.projectilePool.clear();
         this.enemyPool.clear();
+        this.powerUpPool.clear();
         this.enemySpawner.reset();
         this.particles.clear();
         this.background.reset();
+        this.powerUpSpawnTimer = 0;
 
         // UI 업데이트
         this.ui.showGameScreen();
@@ -126,10 +131,18 @@ class Game {
 
         // 플레이어 발사
         if (this.input.isKeyPressed('Space')) {
-            const laserData = this.player.fireLaser();
-            if (laserData) {
-                const projectile = this.projectilePool.get();
-                projectile.init(laserData.x, laserData.y, laserData.type);
+            const laserDataArray = this.player.fireLaser();
+            if (laserDataArray) {
+                laserDataArray.forEach(laserData => {
+                    const projectile = this.projectilePool.get();
+                    projectile.init(
+                        laserData.x, 
+                        laserData.y, 
+                        laserData.type, 
+                        laserData.angle || -90,
+                        laserData.enhanced || false
+                    );
+                });
                 this.audio.playLaser();
             }
         }
@@ -138,10 +151,28 @@ class Game {
             const bombData = this.player.fireBomb();
             if (bombData) {
                 const projectile = this.projectilePool.get();
-                projectile.init(bombData.x, bombData.y, bombData.type);
+                projectile.init(bombData.x, bombData.y, bombData.type, -90, false);
                 this.audio.playBomb();
             }
         }
+
+        // 파워업 생성
+        this.powerUpSpawnTimer += deltaTime;
+        if (this.powerUpSpawnTimer >= this.powerUpSpawnInterval) {
+            this.powerUpSpawnTimer = 0;
+            this.spawnPowerUp();
+        }
+
+        // 파워업 업데이트
+        const powerUps = this.powerUpPool.getActive();
+        powerUps.forEach(powerUp => {
+            powerUp.update(deltaTime);
+            
+            // 화면 밖으로 나가면 제거
+            if (powerUp.isOffScreen(this.canvas.width, this.canvas.height)) {
+                this.powerUpPool.release(powerUp);
+            }
+        });
 
         // 투사체 업데이트
         const projectiles = this.projectilePool.getActive();
@@ -223,6 +254,12 @@ class Game {
                             enemy.isGroundTarget ? 15 : 10
                         );
                         this.audio.playExplosion();
+                        
+                        // 파워업 드롭 확률 (10%)
+                        if (Math.random() < 0.1) {
+                            this.spawnPowerUpAt(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                        }
+                        
                         this.enemyPool.release(enemy);
                     } else {
                         this.particles.createSmallExplosion(
@@ -263,6 +300,73 @@ class Game {
                 this.hitPlayer();
             }
         });
+
+        // 파워업 vs 플레이어
+        const powerUps = this.powerUpPool.getActive();
+        powerUps.forEach(powerUp => {
+            if (!powerUp.active) return;
+
+            if (CollisionDetector.checkEntityCollision(powerUp, this.player)) {
+                const success = this.player.powerUp(powerUp.type);
+                if (success) {
+                    this.audio.playPowerUp();
+                    this.particles.createExplosion(
+                        powerUp.x + powerUp.width / 2,
+                        powerUp.y + powerUp.height / 2,
+                        8,
+                        this.getPowerUpColor(powerUp.type)
+                    );
+                    this.powerUpPool.release(powerUp);
+                    
+                    // UI 업데이트
+                    this.ui.updateLives(this.player.health);
+                    this.ui.updateWeaponLevel(this.player.weaponLevel);
+                }
+            }
+        });
+    }
+
+    getPowerUpColor(type) {
+        switch(type) {
+            case 'weapon': return '#ff3333';
+            case 'life': return '#00ff00';
+            case 'bomb': return '#ffff00';
+            case 'shield': return '#00ffff';
+            default: return '#ffffff';
+        }
+    }
+
+    spawnPowerUp() {
+        const x = Utils.randomInt(50, this.canvas.width - 50);
+        const y = -30;
+        const types = ['weapon', 'life', 'bomb', 'shield'];
+        const weights = [0.5, 0.2, 0.2, 0.1]; // weapon이 가장 높은 확률
+        const type = this.weightedRandom(types, weights);
+        
+        const powerUp = this.powerUpPool.get();
+        powerUp.init(x, y, type);
+    }
+
+    spawnPowerUpAt(x, y) {
+        const types = ['weapon', 'life', 'bomb', 'shield'];
+        const weights = [0.6, 0.2, 0.15, 0.05];
+        const type = this.weightedRandom(types, weights);
+        
+        const powerUp = this.powerUpPool.get();
+        powerUp.init(x, y, type);
+    }
+
+    weightedRandom(items, weights) {
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+        let random = Math.random() * totalWeight;
+        
+        for (let i = 0; i < items.length; i++) {
+            random -= weights[i];
+            if (random <= 0) {
+                return items[i];
+            }
+        }
+        return items[0];
     }
 
     hitPlayer() {
@@ -324,6 +428,10 @@ class Game {
         // 지상 목표물 먼저 그리기
         groundEnemies.forEach(enemy => enemy.draw(this.ctx));
 
+        // 파워업 그리기
+        const powerUps = this.powerUpPool.getActive();
+        powerUps.forEach(powerUp => powerUp.draw(this.ctx));
+
         // 투사체 그리기
         const projectiles = this.projectilePool.getActive();
         projectiles.forEach(projectile => projectile.draw(this.ctx));
@@ -365,6 +473,7 @@ class Game {
         this.ui.updateScore(this.score);
         this.ui.updateStage(this.stage);
         this.ui.updateLives(this.lives);
+        this.ui.updateWeaponLevel(this.player.weaponLevel);
     }
 
     saveHighScore() {

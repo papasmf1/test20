@@ -19,6 +19,7 @@ class UIManager {
         this.scoreDisplay = document.getElementById('scoreDisplay');
         this.stageDisplay = document.getElementById('stageDisplay');
         this.livesDisplay = document.getElementById('livesDisplay');
+        this.weaponLevelDisplay = document.getElementById('weaponLevelDisplay');
         this.finalScore = document.getElementById('finalScore');
         this.newHighScore = document.getElementById('newHighScore');
     }
@@ -78,6 +79,12 @@ class UIManager {
 
     updateLives(lives) {
         this.livesDisplay.textContent = '❤'.repeat(Math.max(0, lives));
+    }
+
+    updateWeaponLevel(level) {
+        if (this.weaponLevelDisplay) {
+            this.weaponLevelDisplay.textContent = '★'.repeat(level);
+        }
     }
 
     isSoundEnabled() {

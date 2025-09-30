@@ -6,19 +6,28 @@ class Projectile extends Entity {
         this.damage = 1;
         this.speed = 10;
         this.type = 'laser';
+        this.angle = -90; // 기본 위쪽
+        this.enhanced = false;
     }
 
-    init(x, y, type = 'laser') {
+    init(x, y, type = 'laser', angle = -90, enhanced = false) {
         this.x = x - this.width / 2;
         this.y = y;
         this.type = type;
+        this.angle = angle;
+        this.enhanced = enhanced;
         this.active = true;
 
         if (type === 'laser') {
-            this.width = 4;
-            this.height = 12;
+            this.width = enhanced ? 6 : 4;
+            this.height = enhanced ? 16 : 12;
             this.speed = 10;
-            this.velocity.y = -this.speed;
+            this.damage = enhanced ? 2 : 1;
+            
+            // 각도에 따른 속도 설정
+            const radians = (angle * Math.PI) / 180;
+            this.velocity.x = Math.cos(radians) * this.speed;
+            this.velocity.y = Math.sin(radians) * this.speed;
         } else if (type === 'bomb') {
             this.width = 6;
             this.height = 8;
@@ -40,12 +49,31 @@ class Projectile extends Entity {
         if (!this.active) return;
 
         if (this.type === 'laser') {
-            // 플레이어 레이저 - 밝은 청록색
-            ctx.fillStyle = '#00ffff';
-            ctx.shadowColor = '#00ffff';
-            ctx.shadowBlur = 5;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            // 플레이어 레이저
+            ctx.save();
+            ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+            ctx.rotate((this.angle + 90) * Math.PI / 180); // 회전 적용
+            
+            if (this.enhanced) {
+                // 강화된 레이저 - 더 밝고 굵음
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                
+                // 내부 밝은 부분
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-this.width / 4, -this.height / 2, this.width / 2, this.height);
+            } else {
+                // 기본 레이저
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 5;
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+            }
+            
             ctx.shadowBlur = 0;
+            ctx.restore();
         } else if (this.type === 'bomb') {
             // 폭탄 - 노란색
             ctx.fillStyle = '#ffff00';
